@@ -2,24 +2,527 @@
 <html>
 <head>
     <title>CS Class Hub</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background: #f3f4f6;
+        }
+
+        header {
+            background: #111827;
+            color: white;
+            text-align: center;
+            padding: 25px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,.08);
+        }
+
+        input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 8px;
+            background: #2563eb;
+            color: white;
+            font-size: 16px;
+        }
+
+        .unit {
+            background: #eef2ff;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .danger {
+            background: #dc2626;
+        }
+
+        .switch {
+            color: #2563eb;
+            text-align: center;
+            margin-top: 15px;
+        }
+    </style>
 </head>
 
 <body>
-    <h1>Welcome to CS Class Hub</h1>
 
-    <p>Your place for Computer Science class information.</p>
+<header>
+    <h1>💻 CS Class Hub</h1>
+    <p>Your student portal</p>
+</header>
 
-    <h2>Our Units</h2>
+<div class="container">
 
-    <ul>
-        <li>Mathematics</li>
-        <li>Computer Programming</li>
-        <li>Computer Systems</li>
-        <li>Philosophy and Society</li>
-    </ul>
+    <!-- LOGIN -->
+    <div id="loginPage" class="card">
+        <h2>🔑 Login</h2>
 
-    <h2>Announcements</h2>
+        <input id="loginEmail" type="email" placeholder="Email">
 
-    <p>No announcements yet.</p>
+        <input id="loginPassword" type="password" placeholder="Password">
+
+        <button onclick="login()">Login</button>
+
+        <p id="loginMessage"></p>
+
+        <p class="switch" onclick="showRegister()">
+            Don't have an account? Register
+        </p>
+    </div>
+
+
+    <!-- REGISTER -->
+    <div id="registerPage" class="card hidden">
+        <h2>📝 Create Account</h2>
+
+        <input id="registerName" type="text" placeholder="Full name">
+
+        <input id="registerStudentNumber" type="text"
+               placeholder="Student number">
+
+        <input id="registerEmail" type="email"
+               placeholder="Email">
+
+        <input id="registerPassword" type="password"
+               placeholder="Password">
+
+        <button onclick="register()">Create Account</button>
+
+        <p id="registerMessage"></p>
+
+        <p class="switch" onclick="showLogin()">
+            Already have an account? Login
+        </p>
+    </div>
+
+
+    <!-- DASHBOARD -->
+    <div id="dashboard" class="hidden">
+
+        <div class="card">
+            <h2>👋 Welcome, <span id="studentName"></span></h2>
+
+            <p>These are your units.</p>
+
+            <button class="danger" onclick="logout()">
+                Logout
+            </button>
+        </div>
+
+        <div class="card">
+            <h2>📚 My Units</h2>
+
+            <input id="unitName"
+                   type="text"
+                   placeholder="Enter unit name">
+
+            <button onclick="addUnit()">
+                + Add Unit
+            </button>
+
+            <div id="unitsList"></div>
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+const SUPABASE_URL =
+"https://mczwwpxqasjqlbwpjdfc.supabase.co";
+
+const SUPABASE_KEY =
+"sb_publishable_TuBFgQkYWUewKyaj3oYjkQ_Se_zxK1N";
+
+async function supabaseRequest(endpoint, options = {}) {
+
+    const response = await fetch(
+        SUPABASE_URL + endpoint,
+        {
+            ...options,
+
+            headers: {
+                "apikey": SUPABASE_KEY,
+                "Authorization":
+                    "Bearer " + SUPABASE_KEY,
+                "Content-Type": "application/json",
+                ...(options.headers || {})
+            }
+        }
+    );
+
+    return response;
+}
+
+
+/* SHOW REGISTER */
+
+function showRegister() {
+
+    document
+        .getElementById("loginPage")
+        .classList.add("hidden");
+
+    document
+        .getElementById("registerPage")
+        .classList.remove("hidden");
+}
+
+
+/* SHOW LOGIN */
+
+function showLogin() {
+
+    document
+        .getElementById("registerPage")
+        .classList.add("hidden");
+
+    document
+        .getElementById("loginPage")
+        .classList.remove("hidden");
+}
+
+
+/* REGISTER */
+
+async function register() {
+
+    const name =
+        document.getElementById("registerName").value;
+
+    const studentNumber =
+        document.getElementById("registerStudentNumber").value;
+
+    const email =
+        document.getElementById("registerEmail").value;
+
+    const password =
+        document.getElementById("registerPassword").value;
+
+    const message =
+        document.getElementById("registerMessage");
+
+
+    if (!name || !studentNumber || !email || !password) {
+
+        message.innerText =
+            "Please fill in everything.";
+
+        return;
+    }
+
+
+    message.innerText = "Creating account...";
+
+
+    const response = await fetch(
+        SUPABASE_URL + "/auth/v1/signup",
+        {
+            method: "POST",
+
+            headers: {
+                "apikey": SUPABASE_KEY,
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                email: email,
+                password: password
+            })
+        }
+    );
+
+
+    const data = await response.json();
+
+
+    if (!response.ok) {
+
+        message.innerText =
+            data.msg || data.message ||
+            "Registration failed.";
+
+        return;
+    }
+
+
+    if (!data.user) {
+
+        message.innerText =
+            "Check your email to confirm your account.";
+
+        return;
+    }
+
+
+    /* Save student profile */
+
+    await supabaseRequest(
+        "/rest/v1/profiles",
+        {
+            method: "POST",
+
+            headers: {
+                "Prefer": "return=minimal"
+            },
+
+            body: JSON.stringify({
+                id: data.user.id,
+                full_name: name,
+                student_number: studentNumber
+            })
+        }
+    );
+
+
+    message.innerText =
+        "Account created! You can now login.";
+
+    showLogin();
+}
+
+
+/* LOGIN */
+
+async function login() {
+
+    const email =
+        document.getElementById("loginEmail").value;
+
+    const password =
+        document.getElementById("loginPassword").value;
+
+    const message =
+        document.getElementById("loginMessage");
+
+
+    message.innerText = "Logging in...";
+
+
+    const response = await fetch(
+        SUPABASE_URL + "/auth/v1/token?grant_type=password",
+        {
+            method: "POST",
+
+            headers: {
+                "apikey": SUPABASE_KEY,
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                email: email,
+                password: password
+            })
+        }
+    );
+
+
+    const data = await response.json();
+
+
+    if (!response.ok) {
+
+        message.innerText =
+            data.error_description ||
+            data.msg ||
+            "Login failed.";
+
+        return;
+    }
+
+
+    localStorage.setItem(
+        "access_token",
+        data.access_token
+    );
+
+    localStorage.setItem(
+        "user_id",
+        data.user.id
+    );
+
+
+    await loadDashboard();
+}
+
+
+/* DASHBOARD */
+
+async function loadDashboard() {
+
+    const userId =
+        localStorage.getItem("user_id");
+
+    if (!userId) return;
+
+
+    const response =
+        await supabaseRequest(
+            "/rest/v1/profiles?id=eq." +
+            userId +
+            "&select=*"
+        );
+
+
+    const profiles =
+        await response.json();
+
+
+    if (profiles.length > 0) {
+
+        document.getElementById(
+            "studentName"
+        ).innerText =
+            profiles[0].full_name;
+    }
+
+
+    document
+        .getElementById("loginPage")
+        .classList.add("hidden");
+
+    document
+        .getElementById("registerPage")
+        .classList.add("hidden");
+
+    document
+        .getElementById("dashboard")
+        .classList.remove("hidden");
+
+
+    loadUnits();
+}
+
+
+/* ADD UNIT */
+
+async function addUnit() {
+
+    const unitName =
+        document.getElementById("unitName").value;
+
+    const userId =
+        localStorage.getItem("user_id");
+
+
+    if (!unitName) return;
+
+
+    await supabaseRequest(
+        "/rest/v1/units",
+        {
+            method: "POST",
+
+            headers: {
+                "Prefer": "return=minimal"
+            },
+
+            body: JSON.stringify({
+                user_id: userId,
+                unit_name: unitName
+            })
+        }
+    );
+
+
+    document.getElementById(
+        "unitName"
+    ).value = "";
+
+
+    loadUnits();
+}
+
+
+/* LOAD UNITS */
+
+async function loadUnits() {
+
+    const userId =
+        localStorage.getItem("user_id");
+
+
+    const response =
+        await supabaseRequest(
+            "/rest/v1/units?user_id=eq." +
+            userId +
+            "&select=*"
+        );
+
+
+    const units =
+        await response.json();
+
+
+    const list =
+        document.getElementById("unitsList");
+
+
+    list.innerHTML = "";
+
+
+    units.forEach(unit => {
+
+        const div =
+            document.createElement("div");
+
+        div.className = "unit";
+
+        div.innerText =
+            "📘 " + unit.unit_name;
+
+        list.appendChild(div);
+
+    });
+}
+
+
+/* LOGOUT */
+
+function logout() {
+
+    localStorage.removeItem("access_token");
+
+    localStorage.removeItem("user_id");
+
+    location.reload();
+}
+
+
+</script>
+
 </body>
 </html>
